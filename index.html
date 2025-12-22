@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>메리크리 놀이터</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #F5FAFF;
+            font-family: 'Gaegu', cursive;
+            touch-action: none;
+            image-rendering: pixelated;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #F5FAFF;
+        }
+
+        canvas {
+            display: block;
+        }
+        
+        /* 메인 게임 캔버스 스타일 */
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-layer {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        /* 로그인 화면 */
+        #login-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(245, 250, 255, 0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            z-index: 100;
+            pointer-events: auto;
+            transition: opacity 0.5s;
+        }
+
+        .custom-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: #455a64;
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.1);
+            max-width: 95%;
+            width: 340px;
+            border: 4px solid #b0bec5;
+        }
+
+        .preview-area {
+            width: 120px;
+            height: 120px;
+            background: #e1f5fe;
+            margin: 10px auto;
+            border: 4px solid #b0bec5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            border-radius: 8px;
+        }
+
+        .control-group {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        button {
+            background: #90a4ae;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 0 #607d8b;
+            border-radius: 4px;
+            transition: transform 0.1s;
+        }
+        button:active { transform: translateY(4px); box-shadow: none; }
+        button:disabled { background: #cfd8dc; box-shadow: none; cursor: not-allowed; }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid #cfd8dc;
+            width: 80%;
+            font-family: inherit;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            text-align: center;
+            background: #fff;
+            border-radius: 4px;
+        }
+
+        #start-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.3rem;
+            background: #26a69a;
+            box-shadow: 0 4px 0 #00796b;
+            margin-top: 10px;
+            color: white;
+        }
+        
+        #attendance-btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 1.1rem;
+            background: #ffb74d;
+            box-shadow: 0 4px 0 #f57c00;
+            margin-top: 10px;
+            color: #3e2723;
+            display: none;
+        }
+        
+        /* 선물 개봉 연출 */
+        #gift-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8); z-index: 200;
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+        #gift-box {
+            font-size: 100px; cursor: pointer;
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        #gift-msg {
+            color: white; font-size: 1.5rem; margin-top: 20px; text-align: center;
+        }
+
+        /* 미니게임 오버레이 */
+        #minigame-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(20, 24, 46, 0.98); z-index: 150;
+            display: none; flex-direction: column; align-items: center; justify-content: flex-start;
+            pointer-events: auto; color: white; padding-top: 20px;
+        }
+        #mg-canvas {
+            background: #F5FAFF; border: 4px solid #fff; border-radius: 8px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            image-rendering: pixelated;
+            width: 300px; height: 360px; /* 고정 크기 */
+        }
+        #mg-header { width: 300px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        #mg-score { font-size: 2rem; color: #FFD700; text-shadow: 2px 2px 0 #000; }
+        #mg-close-btn { 
+            background: #ef5350; border: none; color: white; padding: 5px 12px; border-radius: 4px; font-size: 0.9rem;
+        }
+        
+        #mg-controls { margin-top: 10px; display: flex; gap: 40px; }
+        .mg-btn { 
+            width: 60px; height: 60px; font-size: 1.8rem; 
+            background: rgba(255,255,255,0.2); border: 2px solid white; 
+            border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center;
+            user-select: none;
+        }
+        .mg-btn:active { background: rgba(255,255,255,0.4); transform: scale(0.95); }
+
+        #mg-rank-area {
+            width: 300px; margin-top: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;
+        }
+        #mg-rank-title { font-size: 1.1rem; color: #fff176; margin-bottom: 5px; text-align: center; }
+        #mg-rank-list { font-size: 0.9rem; list-style: none; padding: 0; margin: 0; max-height: 100px; overflow-y: auto; }
+        #mg-rank-list li { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        /* UI 및 채팅 */
+        #player-count {
+            position: absolute; top: 10px; left: 10px;
+            background: rgba(0,0,0,0.5); color: white;
+            padding: 5px 10px; border-radius: 20px; font-size: 0.9rem;
+            z-index: 10;
+        }
+        #chat-wrapper {
+            position: absolute; bottom: 20px; left: 20px; right: 20px;
+            pointer-events: none; z-index: 50;
+            display: flex; flex-direction: column; align-items: flex-start;
+        }
+        #chat-container {
+            pointer-events: auto;
+            width: 100%; max-width: 400px;
+            display: none; /* 토글로 열림 */
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px; padding: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin-bottom: 50px; /* 버튼 공간 */
+        }
+        #chat-log {
+            height: 150px; overflow-y: auto; margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .chat-msg { margin-bottom: 4px; line-height: 1.4; }
+        .my-msg { color: #00796b; font-weight: bold; }
+        #chat-input-area { display: flex; gap: 5px; }
+        #chat-input { flex: 1; margin: 0; text-align: left; }
+        #send-btn { width: auto; font-size: 0.9rem; margin: 0; padding: 8px 15px; background: #00897b; }
+        
+        #chat-toggle-btn {
+            pointer-events: auto;
+            position: fixed; bottom: 20px; left: 20px;
+            width: 50px; height: 50px; border-radius: 25px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; z-index: 51;
+        }
+        
+        #game-trigger-btn {
+            position: absolute; top: 10px; right: 10px;
+            width: 50px; height: 50px; border-radius: 50%;
+            background: #ff5252; color: white;
+            display: none; /* 게임 시작 후 표시 */
+            justify-content: center; align-items: center;
+            font-size: 1.5rem; box-shadow: 0 4px 0 #d32f2f;
+            cursor: pointer; pointer-events: auto; z-index: 20;
+        }
+        #game-trigger-btn:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 모바일 D-Pad */
+        #dpad {
+            position: absolute; 
+            bottom: 100px; /* 위치 상향 조정됨 */
+            right: 20px;
+            width: 120px; height: 120px; pointer-events: auto;
+            display: none; z-index: 40;
+        }
+        .dpad-btn {
+            position: absolute; background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        .dpad-up { top: 0; left: 40px; width: 40px; height: 40px; }
+        .dpad-down { bottom: 0; left: 40px; width: 40px; height: 40px; }
+        .dpad-left { top: 40px; left: 0; width: 40px; height: 40px; }
+        .dpad-right { top: 40px; right: 0; width: 40px; height: 40px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div id="player-count">1명</div>
+        
+        <div id="login-screen">
+            <h1 style="color:#26a69a; text-shadow: 2px 2px 0 #e0f2f1; font-size: 2.5rem;">🎄 해피크리</h1>
+            <div class="custom-box">
+                <div class="preview-area">
+                    <canvas id="previewCanvas" width="120" height="120"></canvas>
+                </div>
+                <input type="text" id="nickname" placeholder="닉네임 (최대 6글자)" maxlength="6" value="산타">
+                
+                <div class="control-group">
+                    <span>캐릭터</span>
+                    <div>
+                        <button onclick="changeCustom('charType', -1)">◀</button>
+                        <span id="charType-label" style="display:inline-block; width: 60px;">공주</span>
+                        <button onclick="changeCustom('charType', 1)">▶</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <span>머리 색상</span>
+                    <div>
+                        <button onclick="changeCustom('hairColor', -1)">◀</button>
+                        <span id="hairColor-label" style="display:inline-block; width: 60px;">핑크</span>
+                        <button onclick="changeCustom('hairColor', 1)">▶</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <span>피부 색상</span>
+                    <div>
+                        <button onclick="changeCustom('skinColor', -1)">◀</button>
+                        <span id="skinColor-label" style="display:inline-block; width: 60px;">기본</span>
+                        <button onclick="changeCustom('skinColor', 1)">▶</button>
+                    </div>
+                </div>
+
+                <button id="attendance-btn">보너스캐릭터</button>
+                <button id="start-btn" disabled>연결 중...</button>
+            </div>
+        </div>
+        
+        <div id="gift-overlay">
+            <div id="gift-box">🎁</div>
+            <div id="gift-msg">상자를 눌러보세요!</div>
+        </div>
+
+        <div id="minigame-overlay">
+            <div id="mg-header">
+                <div style="font-size: 1.2rem;">🎁 선물 받기 게임</div>
+                <button id="mg-close-btn">닫기</button>
+            </div>
+            
+            <div style="position: relative;">
+                <canvas id="mg-canvas" width="300" height="360"></canvas>
+                <div id="mg-score" style="position: absolute; top: 10px; right: 10px;">0</div>
+                <div id="mg-start-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #555; font-weight: bold; pointer-events: none;">START</div>
+            </div>
+
+            <div id="mg-controls">
+                <div class="mg-btn" id="mg-left">◀</div>
+                <div class="mg-btn" id="mg-right">▶</div>
+            </div>
+
+            <div id="mg-rank-area">
+                <div id="mg-rank-title">🏆 명예의 전당 (Top 5)</div>
+                <ul id="mg-rank-list">
+                    <li>로딩중...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="chat-wrapper">
+            <div id="chat-container">
+                <div id="chat-log"></div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="메시지 입력..." autocomplete="off">
+                    <button id="send-btn">전송</button>
+                </div>
+            </div>
+            <button id="chat-toggle-btn" style="display:none;">💬</button>
+        </div>
+
+        <div id="game-trigger-btn">🎁</div>
+        
+        <div id="dpad">
+            <div class="dpad-btn dpad-up" ontouchstart="handleTouch('up')" ontouchend="stopTouch()"></div>
+            <div class="dpad-btn dpad-down" ontouchstart="handleTouch('down')" ontouchend="stopTouch()"></div>
+            <div class="dpad-btn dpad-left" ontouchstart="handleTouch('left')" ontouchend="stopTouch()"></div>
+            <div class="dpad-btn dpad-right" ontouchstart="handleTouch('right')" ontouchend="stopTouch()"></div>
+        </div>
+    </div>
+</div>
+    <button id="bgm-btn" style="position:fixed; top:70px; right:10px; width:40px; height:40px; border-radius:50%; background:#fff; border:none; box-shadow:0 4px 0 #ccc; z-index:100;">🔇</button>
+
+   <source src="./bgm.mp3" type="audio/mp3">
+
+
+
+<script type="module">
+    // [수정] 올바른 Firebase 버전 사용
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, addDoc, getDocs, query, orderBy, limit, onSnapshot, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    // 주의: 실제 배포 시에는 자신의 Firebase 프로젝트 키를 사용하세요.
+    const firebaseConfig = {
+        apiKey: "AIzaSyA--SvB1MUR0zSeaBqPh2Bjhe6SVAQzYwQ",
+        authDomain: "thensino.firebaseapp.com",
+        projectId: "thensino",
+        storageBucket: "thensino.firebasestorage.app",
+        messagingSenderId: "1043602185960",
+        appId: "1:1043602185960:web:4340b898fa54724cb0735d",
+        measurementId: "G-6Y3XN3Y7S2"
+    };
+
+    let app, auth, db;
+    let isOfflineMode = false;
+    let snowballs = []; 
+
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (e) {
+        console.warn("Firebase Init Error:", e);
+        isOfflineMode = true;
+    }
+
+    // 기본적으로 로컬 실행 시 ID 통일
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'christmas-lobby-2024';
+
+    let myUid = null;
+    let myDocRef = null;
+    let otherPlayers = {};
+    let unlockedChars = [0, 1]; 
+
+    const startBtn = document.getElementById('start-btn');
+    const attendanceBtn = document.getElementById('attendance-btn');
+    const chatToggleBtn = document.getElementById('chat-toggle-btn');
+    const chatContainer = document.getElementById('chat-container');
+    let isChatOpen = false;
+
+    chatToggleBtn.addEventListener('click', () => {
+        isChatOpen = !isChatOpen;
+        if(isChatOpen) {
+            chatContainer.style.display = 'flex';
+            chatToggleBtn.innerText = '✖';
+            chatToggleBtn.style.background = '#ef5350'; 
+            chatToggleBtn.style.color = 'white';
+            document.getElementById('chat-input').focus();
+        } else {
+            chatContainer.style.display = 'none';
+            chatToggleBtn.innerText = '💬';
+            chatToggleBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+            chatToggleBtn.style.color = '#333';
+        }
+    });
+
+    async function initAuth() {
+        if (isOfflineMode) {
+            enableOfflinePlay();
+            return;
+        }
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.error("Auth Error:", e);
+            enableOfflinePlay();
+        }
+    }
+
+    function enableOfflinePlay() {
+        isOfflineMode = true;
+        myUid = "guest_" + Date.now();
+        startBtn.innerText = "입장하기 (오프라인)";
+        startBtn.disabled = false;
+        attendanceBtn.style.display = "none";
+        document.getElementById('player-count').innerText = "접속자: 1명 (나)";
+    }
+
+    if (!isOfflineMode) {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                myUid = user.uid;
+                startBtn.innerText = "입장하기 🏰";
+                startBtn.disabled = false;
+                attendanceBtn.style.display = "block";
+                
+                const userDocRef = doc(db, 'artifacts', appId, 'users', myUid, 'profile', 'data');
+                try {
+                    const snap = await getDoc(userDocRef);
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if(data.unlockedChars) unlockedChars = data.unlockedChars;
+                        const today = new Date().toDateString();
+                        if(data.lastAttendance === today) {
+                            attendanceBtn.innerText = "✅ 오늘 출석 완료";
+                            attendanceBtn.disabled = true;
+                            attendanceBtn.style.background = "#cfd8dc";
+                        }
+                    }
+                } catch(e) { console.log("Profile load failed", e); }
+                
+                setupListeners();
+            }
+        });
+    }
+    
+    initAuth();
+
+    attendanceBtn.addEventListener('click', () => {
+        document.getElementById('gift-overlay').style.display = 'flex';
+    });
+
+    document.getElementById('gift-box').addEventListener('click', async () => {
+        const giftBox = document.getElementById('gift-box');
+        const giftMsg = document.getElementById('gift-msg');
+        
+        giftBox.innerText = "👑"; 
+        giftBox.style.animation = "none";
+        giftMsg.innerHTML = "축하합니다!<br><span style='color:#ffd54f; font-weight:bold;'>여왕 캐릭터</span>를 얻었습니다!";
+        
+        if (!unlockedChars.includes(2)) {
+            unlockedChars.push(2);
+        }
+        
+        if (!isOfflineMode) {
+            const userDocRef = doc(db, 'artifacts', appId, 'users', myUid, 'profile', 'data');
+            const today = new Date().toDateString();
+            try {
+                await setDoc(userDocRef, {
+                    unlockedChars: unlockedChars,
+                    lastAttendance: today
+                }, { merge: true });
+                
+                attendanceBtn.innerText = "✅ 오늘 출석 완료";
+                attendanceBtn.disabled = true;
+                attendanceBtn.style.background = "#cfd8dc";
+            } catch(e) { console.error(e); }
+        }
+
+        setTimeout(() => {
+            document.getElementById('gift-overlay').style.display = 'none';
+            myPlayer.appearance.charType = 2;
+            document.getElementById('charType-label').innerText = CHAR_NAMES[2];
+            drawPreview();
+        }, 2000);
+    });
+
+    // --- PALETTE & ASSETS ---
+    const PALETTE = {
+        BG: "#F5FAFF",
+        SNOW: "#FFFFFF",
+        TREE_DARK: "#228B22",
+        TREE_LIGHT: "#32CD32",
+        TRUNK: "#8B4513",
+        LIGHTS: ["#FF0000", "#FFD700", "#0000FF", "#FF4500"],
+        SNOWMAN: "#FAFAFA",
+        SCARF: "#DC143C",
+        TABLE: "#A0522D",
+        COOKIE: "#D2B48C",
+        CAT: "#646464",
+        DOG: "#CD853F",
+        GIFTS: ["#FF0000", "#00FF00", "#0000FF", "#FFD700"]
+    };
+
+    const TYPE_COLORS = {
+        0: 'transparent', 1: '#FFD700', 4: '#212121', 6: '#F44336', 
+        7: '#FF9800', 8: '#FFEB3B', 9: '#4CAF50', 10: '#2196F3', 
+        11: '#9C27B0', 12: '#FFFFFF', 13: '#9E9E9E' 
+    };
+
+    const CHAR_PIXELS_FEMALE = [
+        [0,0,0,3,3,3,0,0,0], 
+        [0,0,3,3,3,3,3,0,0], 
+        [0,3,3,3,3,3,3,3,0], 
+        [0,3,3,4,2,4,3,3,0], 
+        [3,3,3,2,2,2,3,3,3], 
+        [0,3,3,2,5,2,3,3,0], 
+        [2,2,3,5,5,5,3,2,2], 
+        [0,3,5,5,5,5,5,3,0], 
+        [2,5,5,5,5,5,5,5,2], 
+        [5,5,5,5,5,5,5,5,5]
+    ];
+
+    const CHAR_PIXELS_MALE = [
+        [0,0,3,3,3,3,3,0,0], 
+        [0,3,3,3,3,3,3,3,0], 
+        [0,3,3,4,2,4,3,3,0], 
+        [0,0,2,2,2,2,2,0,0], 
+        [0,5,5,12,5,12,5,5,2], 
+        [0,5,5,12,5,12,5,5,0], 
+        [0,12,5,5,5,5,5,12,0], 
+        [0,3,5,5,5,5,5,3,0], 
+        [0,0,5,5,0,5,5,0,0], 
+        [0,0,5,5,0,5,5,0,0]
+    ];
+
+
+    const CHAR_PIXELS_QUEEN = [[0,0,0,12,12,12,3,3,3],[0,0,3,3,3,3,3,3,3],[0,3,3,3,3,3,3,3,0],[0,3,3,4,2,4,3,3,0],[0,3,3,2,2,2,3,3,0],[0,0,2,9,9,9,2,0,0],[0,0,2,9,9,9,2,0,0],[0,2,9,9,9,9,9,2,0],[0,9,9,9,9,9,9,9,0],[0,0,0,2,0,2,0,0,0]];
+
+    const CHARACTERS = [CHAR_PIXELS_FEMALE, CHAR_PIXELS_MALE, CHAR_PIXELS_QUEEN];
+    const CHAR_NAMES = ["공주", "왕자", "여왕"];
+    const OUTFIT_COLORS = ["#D32F2F", "#1976D2", "#4CAF50"];
+            
+    const TILE_SIZE = 64;
+    
+    const RAW_MAP_STR = `
+................
+................
+................
+..S........B....
+.......T........
+..C...G.G....D..
+................
+................
+................
+................
+................
+................
+`;
+    let mapObjects = [];
+    const lines = RAW_MAP_STR.trim().split('\n');
+    let mapWidth = 16 * TILE_SIZE;
+    let mapHeight = 12 * TILE_SIZE;
+
+    function parseMap() {
+        mapObjects = [];
+        for(let r=0; r<lines.length; r++) {
+            const row = lines[r];
+            for(let c=0; c<row.length; c++) {
+                const char = row[c];
+                const x = c * TILE_SIZE + TILE_SIZE/2;
+                const y = r * TILE_SIZE + TILE_SIZE/2;
+                if(char !== '.') {
+                    mapObjects.push({ type: char, x: x, y: y, ySort: y + 20 });
+                }
+            }
+        }
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const pCtx = document.getElementById('previewCanvas').getContext('2d');
+    pCtx.imageSmoothingEnabled = false;
+
+    let isPlaying = false, screenW, screenH;
+    const camera = { x: 0, y: 0 };
+    
+    const myPlayer = {
+        x: mapWidth/2, y: mapHeight/2 + 100, speed: 4, name: "방문객",
+        appearance: { charType: 0, hairColor: 0, skinColor: 0 },
+        chatTimer: 0, chatMsg: "", lastSyncTime: 0
+    };
+    const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    
+    const snowParticles = [];
+    for(let i=0; i<150; i++) snowParticles.push({x: Math.random()*mapWidth, y: Math.random()*mapHeight, speed: 1+Math.random()*2, size: 1+Math.random()*2});
+
+    const OPTIONS = {
+        hairColors: ["#F48FB1", "#FFD54F", "#8D6E63", "#212121", "#FF5252"],
+        hairColorNames: ["핑크", "금발", "갈색", "검정", "빨강"],
+        skinColors: ["#FFE0B2", "#FFCCBC", "#D7CCC8", "#8D6E63", "#FFEB3B"],
+        skinColorNames: ["기본", "홍조", "태닝", "다크", "심슨"]
+    };
+
+    function resize() {
+        screenW = canvas.width = window.innerWidth;
+        screenH = canvas.height = window.innerHeight;
+    }
+    
+    window.changeCustom = (type, dir) => {
+        if (type === 'charType') {
+            const len = CHARACTERS.length;
+            let nextType = (myPlayer.appearance.charType + dir + len) % len;
+            let tries = 0;
+            while(!unlockedChars.includes(nextType) && tries < len) {
+                nextType = (nextType + dir + len) % len;
+                tries++;
+            }
+            myPlayer.appearance.charType = nextType;
+            document.getElementById('charType-label').innerText = CHAR_NAMES[myPlayer.appearance.charType];
+        }
+        if (type === 'hairColor') {
+            myPlayer.appearance.hairColor = (myPlayer.appearance.hairColor + dir + 5) % 5;
+            document.getElementById('hairColor-label').innerText = OPTIONS.hairColorNames[myPlayer.appearance.hairColor];
+        }
+        if (type === 'skinColor') {
+            myPlayer.appearance.skinColor = (myPlayer.appearance.skinColor + dir + 5) % 5;
+            document.getElementById('skinColor-label').innerText = OPTIONS.skinColorNames[myPlayer.appearance.skinColor];
+        }
+        drawPreview();
+    };
+
+        
+    function shootSnowball() {
+        let vx = 0, vy = 0;
+        // 키 입력에 따라 방향 결정
+        if (keys.ArrowLeft) vx = -8;
+        else if (keys.ArrowRight) vx = 8;
+        else if (keys.ArrowUp) vy = -8;
+        else vy = 8; // 기본 발사 방향 (아래)
+
+        snowballs.push({
+            x: myPlayer.x,
+            y: myPlayer.y - 20,
+            vx: vx,
+            vy: vy,
+            life: 50
+        });
+    }
+
+    // 초기화 코드는 함수 밖에서 실행
+    resize();
+    parseMap();
+    requestAnimationFrame(gameLoop);
+
+
+    function drawPreview() {
+        pCtx.clearRect(0,0,120,120);
+        pCtx.fillStyle = PALETTE.BG; pCtx.fillRect(0,0,120,120);
+        if (unlockedChars.includes(myPlayer.appearance.charType)) {
+             drawCharacter(pCtx, 60, 105, myPlayer.appearance, false, "", 7);
+        } else {
+             pCtx.fillStyle = "#90a4ae"; pCtx.font = "50px Gaegu"; pCtx.textAlign = "center";
+             pCtx.fillText("?", 60, 70); pCtx.font = "14px Gaegu"; pCtx.fillText("잠김", 60, 90);
+        }
+    }
+
+    startBtn.addEventListener('click', async () => {
+        if (!myUid) return;
+        myPlayer.name = document.getElementById('nickname').value.trim() || "익명";
+        
+        document.getElementById('login-screen').style.opacity = '0';
+        setTimeout(() => document.getElementById('login-screen').style.display = 'none', 500);
+        
+        document.getElementById('chat-toggle-btn').style.display = 'flex';
+        
+        if ('ontouchstart' in window) document.getElementById('dpad').style.display = 'block';
+        if (!isOfflineMode) {
+            myDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', myUid);
+            try {
+                await setDoc(myDocRef, {
+                    x: myPlayer.x, y: myPlayer.y,
+                    name: myPlayer.name, appearance: myPlayer.appearance,
+                    lastActive: serverTimestamp(), chatMsg: "", chatTimer: 0
+                });
+                window.addEventListener('beforeunload', () => deleteDoc(myDocRef));
+            } catch(e) {}
+        }
+
+        isPlaying = true;
+        addLog("시스템", "🎄 윈터 랭킹전에 오신 것을 환영합니다!", false);
+    });
+    
+    function setupListeners() {
+        if (isOfflineMode) return;
+        try {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'players'), (snapshot) => {
+                const newPlayers = {};
+                let totalCount = snapshot.size;
+                
+                if (!snapshot.docs.find(d => d.id === myUid)) {
+                    totalCount += 1; 
+                }
+                document.getElementById('player-count').innerText = `접속자: ${totalCount}명`;
+
+                const now = Date.now();
+
+                snapshot.forEach(d => {
+                    if (d.id === myUid) return; 
+
+                    const data = d.data();
+                    
+                    const oldData = otherPlayers[d.id];
+                    if (data.chatMsg && data.chatMsg.length > 0) {
+                        if (!oldData || oldData.chatMsg !== data.chatMsg) {
+                            addLog(data.name, data.chatMsg, false);
+                        }
+                    }
+
+                    if (data.lastActive) {
+                        const lastActiveTime = data.lastActive.toMillis ? data.lastActive.toMillis() : 0;
+                        if (now - lastActiveTime > 60000) return; 
+                    }
+
+                    newPlayers[d.id] = { ...data, targetX: data.x, targetY: data.y };
+                    
+                    if (otherPlayers[d.id]) {
+                        newPlayers[d.id].x = otherPlayers[d.id].x;
+                        newPlayers[d.id].y = otherPlayers[d.id].y;
+                    } else {
+                        newPlayers[d.id].x = data.x;
+                        newPlayers[d.id].y = data.y;
+                    }
+                });
+                otherPlayers = newPlayers;
+            });
+        } catch(e) { console.error("Snapshot error:", e); }
+    }
+
+
+    async function sendChat() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+        myPlayer.chatMsg = text; myPlayer.chatTimer = 300;
+        addLog(myPlayer.name, text, true);
+        if (!isOfflineMode && myDocRef) {
+            updateDoc(myDocRef, { chatMsg: text, chatTimer: 300, lastActive: serverTimestamp() }).catch(()=>{});
+            setTimeout(() => updateDoc(myDocRef, { chatMsg: "" }).catch(()=>{}), 5000);
+        }
+    }
+    document.getElementById('send-btn').addEventListener('click', sendChat);
+    document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+
+    function addLog(name, text, isMe) {
+        const log = document.getElementById('chat-log');
+        const div = document.createElement('div');
+        div.className = "chat-msg " + (isMe ? "my-msg" : "");
+        div.innerText = `${name}: ${text}`;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    // --- 미니게임 & 랭킹 로직 ---
+    const gameTriggerBtn = document.getElementById('game-trigger-btn');
+    const mgOverlay = document.getElementById('minigame-overlay');
+    const mgCanvas = document.getElementById('mg-canvas');
+    const mgCtx = mgCanvas.getContext('2d');
+    const mgScoreEl = document.getElementById('mg-score');
+    let mgActive = false;
+    let mgScore = 0;
+    let mgPlayerX = 150;
+    let mgItems = [];
+    let mgLoopId;
+    let mgKeys = { left: false, right: false };
+
+    gameTriggerBtn.addEventListener('click', () => {
+        mgOverlay.style.display = 'flex';
+        startMiniGame();
+        loadRanks(); // 랭킹 로드
+    });
+    
+    document.getElementById('mg-close-btn').addEventListener('click', () => {
+        mgOverlay.style.display = 'none';
+        mgActive = false;
+        cancelAnimationFrame(mgLoopId);
+    });
+
+    document.getElementById('mg-left').addEventListener('touchstart', (e)=>{ e.preventDefault(); mgKeys.left=true; });
+    document.getElementById('mg-left').addEventListener('touchend', (e)=>{ e.preventDefault(); mgKeys.left=false; });
+    document.getElementById('mg-left').addEventListener('mousedown', ()=>{ mgKeys.left=true; });
+    document.getElementById('mg-left').addEventListener('mouseup', ()=>{ mgKeys.left=false; });
+
+    document.getElementById('mg-right').addEventListener('touchstart', (e)=>{ e.preventDefault(); mgKeys.right=true; });
+    document.getElementById('mg-right').addEventListener('touchend', (e)=>{ e.preventDefault(); mgKeys.right=false; });
+    document.getElementById('mg-right').addEventListener('mousedown', ()=>{ mgKeys.right=true; });
+    document.getElementById('mg-right').addEventListener('mouseup', ()=>{ mgKeys.right=false; });
+    
+        window.addEventListener('keydown', e => {
+        // 1. 미니게임 조작
+        if (mgActive) {
+            if(e.code === 'ArrowLeft') mgKeys.left = true;
+            if(e.code === 'ArrowRight') mgKeys.right = true;
+        }
+
+        // 2. 메인 게임 조작
+        if (e.code === 'Space') {
+            shootSnowball();
+        }
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+    });
+
+    window.addEventListener('keyup', e => {
+        // 미니게임 키 떼기
+        if(e.code === 'ArrowLeft') mgKeys.left = false;
+        if(e.code === 'ArrowRight') mgKeys.right = false;
+
+        // 메인 게임 키 떼기
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    function startMiniGame() {
+        mgActive = true;
+        mgScore = 0;
+        mgItems = [];
+        mgPlayerX = 150;
+        mgScoreEl.innerText = mgScore;
+        document.getElementById('mg-start-msg').innerText = "START";
+        document.getElementById('mg-start-msg').style.display = 'block';
+        setTimeout(() => document.getElementById('mg-start-msg').style.display = 'none', 1000);
+        mgLoop();
+    }
+
+    async function saveScore(score) {
+        if(score === 0) return;
+        if(isOfflineMode) return;
+        
+        try {
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ranks'), {
+                name: myPlayer.name,
+                score: score,
+                date: serverTimestamp()
+            });
+            loadRanks(); // 랭킹 갱신
+        } catch(e) { console.error("Score Save Error", e); }
+    }
+
+    async function loadRanks() {
+        if(isOfflineMode) {
+            document.getElementById('mg-rank-list').innerHTML = "<li>오프라인 모드</li>";
+            return;
+        }
+        
+        try {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ranks'), orderBy("score", "desc"), limit(5));
+            const querySnapshot = await getDocs(q);
+            const list = document.getElementById('mg-rank-list');
+            list.innerHTML = "";
+            let rank = 1;
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${rank}. ${data.name}</span> <span style="color:#FFD700">${data.score}점</span>`;
+                list.appendChild(li);
+                rank++;
+            });
+            if(querySnapshot.empty) {
+                list.innerHTML = "<li>기록 없음</li>";
+            }
+        } catch(e) { console.error("Load Ranks Error", e); }
+    }
+
+    function mgLoop() {
+        if(!mgActive) return;
+        
+        // Update
+        if(mgKeys.left) mgPlayerX -= 5;
+        if(mgKeys.right) mgPlayerX += 5;
+        if(mgPlayerX < 20) mgPlayerX = 20;
+        if(mgPlayerX > 280) mgPlayerX = 280;
+
+        // Spawn Items
+        if(Math.random() < 0.03) {
+            mgItems.push({ 
+                x: Math.random() * 260 + 20, y: -20, 
+                type: Math.random() > 0.4 ? 'gift' : 'snowball', // 눈덩이 비율 60%
+                speed: 2 + Math.random() * 3 
+            });
+        }
+
+        // Draw
+        mgCtx.fillStyle = '#14182E';
+        mgCtx.fillRect(0, 0, 300, 360);
+
+        // Player (Simple)
+        mgCtx.fillStyle = "#8D6E63"; // Basket
+        mgCtx.fillRect(mgPlayerX - 20, 330, 40, 20);
+        mgCtx.fillStyle = "#A1887F"; 
+        mgCtx.fillRect(mgPlayerX - 22, 330, 2, 20);
+        mgCtx.fillRect(mgPlayerX + 20, 330, 2, 20);
+        
+        for(let i = mgItems.length - 1; i >= 0; i--) {
+            let item = mgItems[i];
+            item.y += item.speed;
+            
+            // Draw Item
+            if(item.type === 'gift') drawCustomGift(mgCtx, item.x, item.y);
+            else {
+                mgCtx.fillStyle = "#E0F7FA"; // Snowball
+                mgCtx.beginPath(); mgCtx.arc(item.x, item.y, 8, 0, Math.PI*2); mgCtx.fill();
+            }
+
+            // Collision
+            if(item.y > 320 && item.y < 350 && Math.abs(item.x - mgPlayerX) < 30) {
+                if(item.type === 'gift') {
+                    mgScore += 10;
+                    mgScoreEl.innerText = mgScore;
+                    mgItems.splice(i, 1);
+                } else {
+                    // Game Over
+                    mgActive = false;
+                    document.getElementById('mg-start-msg').innerText = "GAME OVER";
+                    document.getElementById('mg-start-msg').style.display = 'block';
+                    saveScore(mgScore);
+                }
+            }
+            else if(item.y > 380) {
+                mgItems.splice(i, 1);
+            }
+        }
+
+        if(mgActive) mgLoopId = requestAnimationFrame(mgLoop);
+    }
+
+    // --- Main Game Loop ---
+    function gameLoop() {
+        if(isPlaying) update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+        // 1. 플레이어 이동 계산
+        let dx = 0, dy = 0;
+        if (keys.ArrowUp) dy = -1;
+        if (keys.ArrowDown) dy = 1;
+        if (keys.ArrowLeft) dx = -1;
+        if (keys.ArrowRight) dx = 1;
+
+        if (dx !== 0 || dy !== 0) {
+            const len = Math.sqrt(dx*dx + dy*dy);
+            const moveX = (dx/len) * myPlayer.speed;
+            const moveY = (dy/len) * myPlayer.speed;
+
+            // 맵 경계 체크 (간단한 버전)
+            if (myPlayer.x + moveX > 0 && myPlayer.x + moveX < mapWidth) myPlayer.x += moveX;
+            if (myPlayer.y + moveY > 0 && myPlayer.y + moveY < mapHeight) myPlayer.y += moveY;
+            
+            // Firebase 위치 동기화 (0.1초마다)
+            const now = Date.now();
+            if (!isOfflineMode && now - myPlayer.lastSyncTime > 100 && myDocRef) {
+                updateDoc(myDocRef, { x: myPlayer.x, y: myPlayer.y, lastActive: serverTimestamp() }).catch(()=>{});
+                myPlayer.lastSyncTime = now;
+            }
+        }
+
+        // 2. 눈덩이 로직 (업데이트 및 충돌)
+        for (let i = snowballs.length - 1; i >= 0; i--) {
+            let s = snowballs[i];
+            s.x += s.vx;
+            s.y += s.vy;
+            s.life--;
+            
+            // 다른 플레이어와 충돌 체크 (시각적 효과만)
+            for (const uid in otherPlayers) {
+                const p = otherPlayers[uid];
+                const dist = Math.sqrt((p.x - s.x)**2 + (p.y - s.y)**2);
+                if (dist < 20) {
+                    s.life = 0; // 눈덩이 삭제
+                    break;
+                }
+            }
+
+            if (s.life <= 0) {
+                snowballs.splice(i, 1);
+            }
+        }
+
+        // 3. 다른 플레이어 위치 보간 (부드럽게 이동)
+        for (const uid in otherPlayers) {
+            const p = otherPlayers[uid];
+            if (p.chatTimer > 0) p.chatTimer--;
+            
+            // 목표 지점으로 부드럽게 이동 (Lerp)
+            if (p.targetX !== undefined) {
+                p.x += (p.targetX - p.x) * 0.1;
+                p.y += (p.targetY - p.y) * 0.1;
+            }
+        }
+
+        // 4. 내 채팅 타이머 감소
+        if (myPlayer.chatTimer > 0) myPlayer.chatTimer--;
+        
+        // 5. 게임 트리거 버튼(선물상자) 표시 여부
+        const triggerBtn = document.getElementById('game-trigger-btn');
+        if(triggerBtn) triggerBtn.style.display = 'flex';
+        
+        // 6. 눈송이(배경) 움직임
+        snowParticles.forEach(p => {
+            p.y += p.speed;
+            if (p.y > mapHeight + 100) p.y = -10;
+            p.x += Math.sin(p.y * 0.05) * 0.5;
+        });
+    }
+
+    const bgmBtn = document.getElementById('bgm-btn');
+    const bgmAudio = document.getElementById('bgm-audio');
+    let isBgmPlaying = false;
+
+    bgmBtn.addEventListener('click', () => {
+        if (!isBgmPlaying) {
+            bgmAudio.volume = 0.3; // 볼륨 조절
+            bgmAudio.play().then(() => {
+                bgmBtn.innerText = "🔊";
+                isBgmPlaying = true;
+            }).catch(e => console.log("Audio play failed", e));
+        } else {
+            bgmAudio.pause();
+            bgmBtn.innerText = "🔇";
+            isBgmPlaying = false;
+        }
+    });
+
+        startBtn.addEventListener('click', () => {
+        bgmAudio.volume = 0.3;   // 볼륨 30%로 설정
+        bgmAudio.play();         // 음악 재생
+        isBgmPlaying = true;     // "재생 중" 상태로 변경
+        bgmBtn.innerText = "🔊"; // 음소거 버튼 아이콘 변경
+    });
+
+
+    function drawRect(ctx, x, y, w, h, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(w), Math.ceil(h));
+    }
+
+    function drawCustomTree(ctx, x, y) {
+        const trunkW = 20, trunkH = 40;
+        drawRect(ctx, x - trunkW/2, y, trunkW, trunkH, PALETTE.TRUNK);
+        const layers = [70, 55, 40, 25]; 
+        const maxWidth = 160;
+        let curY = y + 10;
+        layers.forEach((h, i) => {
+            const curW = maxWidth - (i * 35);
+            curY -= h;
+            for(let j=0; j<h; j++) {
+                ctx.fillStyle = (j % 4 !== 0) ? PALETTE.TREE_DARK : PALETTE.TREE_LIGHT;
+                const rowW = curW * (j/h); 
+                const py = curY + j;
+                const px = x - (rowW/2);
+                drawRect(ctx, px, py, rowW, 2, ctx.fillStyle);
+                if (Math.random() < 0.1) {
+                    drawRect(ctx, px + Math.random()*rowW, py, 4, 4, PALETTE.LIGHTS[Math.floor(Math.random()*PALETTE.LIGHTS.length)]);
+                }
+            }
+        });
+        drawRect(ctx, x - 5, curY - 10, 10, 10, "#FFD700");
+    }
+
+    function drawCustomSnowman(ctx, x, y) {
+        const bodyColor = PALETTE.SNOWMAN;
+        drawRect(ctx, x-15, y-25, 30, 25, bodyColor); 
+        drawRect(ctx, x-13, y-45, 26, 20, bodyColor); 
+        drawRect(ctx, x-10, y-60, 20, 15, bodyColor); 
+        drawRect(ctx, x-5, y-55, 2, 2, "black");
+        drawRect(ctx, x+3, y-55, 2, 2, "black");
+        drawRect(ctx, x-1, y-52, 3, 2, "orange");
+        drawRect(ctx, x-12, y-45, 24, 4, PALETTE.SCARF);
+        drawRect(ctx, x+5, y-45, 4, 15, PALETTE.SCARF);
+    }
+
+    function drawCustomTable(ctx, x, y) {
+        const w = 50, h = 25;
+        drawRect(ctx, x - 20, y, 5, 15, PALETTE.TABLE);
+        drawRect(ctx, x + 15, y, 5, 15, PALETTE.TABLE);
+        drawRect(ctx, x - 25, y - h, w, h, PALETTE.TABLE);
+        drawRect(ctx, x - 15, y - h - 2, 6, 4, PALETTE.COOKIE);
+        drawRect(ctx, x - 5, y - h - 4, 5, 5, PALETTE.COOKIE);
+        drawRect(ctx, x + 5, y - h - 2, 6, 4, PALETTE.COOKIE);
+    }
+
+    function drawCustomPet(ctx, x, y, type) {
+                const color = (type === 'C') ? PALETTE.CAT : PALETTE.DOG;
+        ctx.fillStyle = color;
+        
+        // 몸통
+        drawRect(ctx, x - 10, y - 10, 20, 10, color);
+        // 머리
+        drawRect(ctx, x - 12, y - 20, 12, 12, color);
+        
+        // 귀 & 꼬리
+        if (type === 'C') { // 고양이
+            drawRect(ctx, x - 12, y - 24, 3, 4, color); // 왼쪽 귀
+            drawRect(ctx, x - 5, y - 24, 3, 4, color);  // 오른쪽 귀
+            drawRect(ctx, x + 10, y - 15, 8, 3, "#424242"); // 꼬리
+        } else { // 강아지
+            drawRect(ctx, x - 14, y - 18, 2, 6, "#8D6E63"); // 귀
+            drawRect(ctx, x + 10, y - 12, 6, 2, color); // 꼬리
+        }
+        
+        // 눈
+        ctx.fillStyle = "black";
+        drawRect(ctx, x - 10, y - 16, 2, 2, "black");
+        drawRect(ctx, x - 6, y - 16, 2, 2, "black");
+    }
+
+    function drawCustomGift(ctx, x, y) {
+        const colorIdx = Math.abs(Math.floor(x + y)) % PALETTE.GIFTS.length;
+        const color = PALETTE.GIFTS[colorIdx];
+        drawRect(ctx, x - 10, y - 20, 20, 20, color);
+        drawRect(ctx, x - 2, y - 20, 4, 20, "#FFFFFF"); // 세로 리본
+        drawRect(ctx, x - 10, y - 12, 20, 4, "#FFFFFF"); // 가로 리본
+    }
+
+    function drawHouse(ctx, x, y) {
+        // 지붕
+        ctx.fillStyle = "#ef5350";
+        for(let i=0; i<10; i++) {
+            drawRect(ctx, x - 40 + (i*4), y - 60 - (i*4), 80 - (i*8), 4, "#ef5350");
+        }
+        // 벽
+        drawRect(ctx, x - 30, y - 60, 60, 60, "#ffe0b2");
+        // 문
+        drawRect(ctx, x - 10, y - 30, 20, 30, "#8d6e63");
+        // 창문
+        drawRect(ctx, x - 25, y - 50, 10, 10, "#81d4fa");
+        drawRect(ctx, x + 15, y - 50, 10, 10, "#81d4fa");
+    }
+
+    function drawCharacter(ctx, cx, cy, appearance, isWalking, name, scale = 4) {
+        const charPixels = CHARACTERS[appearance.charType] || CHARACTERS[0];
+        const rows = charPixels.length;
+        const cols = charPixels[0].length;
+        
+        const w = cols * scale;
+        const h = rows * scale;
+        const x = cx - w / 2;
+        // 걷는 애니메이션: Y축 바운스
+        const bounce = isWalking ? Math.sin(Date.now() / 100) * 3 : 0;
+        const y = cy - h + bounce;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const code = charPixels[r][c];
+                if (code === 0) continue;
+
+                let color = TYPE_COLORS[code];
+                
+                // 동적 색상 매핑
+                if (code === 2) color = OPTIONS.skinColors[appearance.skinColor]; // 피부
+                if (code === 3) color = OPTIONS.hairColors[appearance.hairColor]; // 머리
+                if (code === 5) {
+                    // 의상 색상 (캐릭터 타입별 고정 혹은 커스텀)
+                    color = OUTFIT_COLORS[appearance.charType] || "#D32F2F";
+                }
+                if (code === 9) color = "#FFD700"; // 여왕 왕관/장식
+
+                ctx.fillStyle = color;
+                ctx.fillRect(Math.floor(x + c * scale), Math.floor(y + r * scale), scale, scale);
+            }
+        }
+
+        // 이름표
+        if (name) {
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.fillRect(x + w/2 - 30, y - 25, 60, 18);
+            ctx.fillStyle = "white";
+            ctx.font = "12px Gaegu";
+            ctx.textAlign = "center";
+            ctx.fillText(name, x + w/2, y - 12);
+        }
+    }
+
+    function drawChatBubble(ctx, x, y, msg) {
+        ctx.font = "14px Gaegu";
+        const width = ctx.measureText(msg).width + 20;
+        const height = 30;
+        
+        // 말풍선 배경
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.roundRect(x - width/2, y - 80, width, height, 10);
+        ctx.fill();
+        
+        // 말풍선 꼬리
+        ctx.beginPath();
+        ctx.moveTo(x, y - 50);
+        ctx.lineTo(x - 5, y - 55);
+        ctx.lineTo(x + 5, y - 55);
+        ctx.fill();
+        
+        // 텍스트
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        ctx.fillText(msg, x, y - 60);
+    }
+
+    function draw() {
+        // 카메라 업데이트
+        if (isPlaying) {
+            camera.x = myPlayer.x - screenW / 2;
+            camera.y = myPlayer.y - screenH / 2;
+        }
+
+        // 1. 배경 클리어
+        ctx.fillStyle = PALETTE.BG;
+        ctx.fillRect(0, 0, screenW, screenH);
+
+        // 2. 렌더링 순서 정렬 (Y축 기준, z-index 효과)
+        const renderList = [];
+
+        // 맵 오브젝트 추가
+        mapObjects.forEach(obj => {
+            renderList.push({
+                type: 'obj',
+                data: obj,
+                ySort: obj.ySort || obj.y
+            });
+        });
+
+        // 플레이어들 추가
+        if (isPlaying) {
+            // 나
+            renderList.push({
+                type: 'player',
+                data: myPlayer,
+                ySort: myPlayer.y
+            });
+            // 다른 플레이어
+            for(const uid in otherPlayers) {
+                renderList.push({
+                    type: 'player',
+                    data: otherPlayers[uid],
+                    ySort: otherPlayers[uid].y
+                });
+            }
+        }
+
+        // Y좌표 기준 정렬
+        renderList.sort((a, b) => a.ySort - b.ySort);
+
+        // 3. 그리기
+        ctx.save();
+        ctx.translate(-camera.x, -camera.y);
+
+        renderList.forEach(item => {
+            if (item.type === 'obj') {
+                const o = item.data;
+                if (o.type === 'T') drawCustomTree(ctx, o.x, o.y);
+                else if (o.type === 'S') drawCustomSnowman(ctx, o.x, o.y);
+                else if (o.type === 'B') drawHouse(ctx, o.x, o.y);
+                else if (o.type === 'G') drawCustomGift(ctx, o.x, o.y);
+                else if (o.type === 'C') drawCustomPet(ctx, o.x, o.y, 'C');
+                else if (o.type === 'D') drawCustomPet(ctx, o.x, o.y, 'D');
+            } else {
+                const p = item.data;
+                const isWalking = (Math.abs(p.x - (p.prevX || p.x)) > 0.1 || Math.abs(p.y - (p.prevY || p.y)) > 0.1);
+                // prev 좌표 업데이트 (다음 프레임 비교용)
+                p.prevX = p.x; p.prevY = p.y;
+                
+                drawCharacter(ctx, p.x, p.y, p.appearance, isWalking, p.name);
+                
+                if (p.chatMsg && p.chatTimer > 0) {
+                    drawChatBubble(ctx, p.x, p.y, p.chatMsg);
+                }
+            }
+        });
+        
+        // 눈덩이 그리기
+        ctx.fillStyle = "#E0F7FA"; 
+        snowballs.forEach(s => {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); 
+            ctx.fill();
+            ctx.strokeStyle = "#B2EBF2";
+            ctx.stroke();
+        });
+        
+        ctx.restore(); 
+
+        // 4. 눈 내리는 효과
+        ctx.fillStyle = PALETTE.SNOW;
+        snowParticles.forEach(p => {
+            // 카메라 움직임에 따른 시차 효과 (Parallax)
+            const viewX = (p.x - camera.x * 0.5) % screenW; 
+            const finalX = viewX < 0 ? viewX + screenW : viewX;
+            
+            ctx.beginPath();
+            ctx.arc(finalX, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+        });
+    }
+
+    // --- 입력 제어 (키보드 & 터치) ---
+
+    window.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT') return; // 채팅 입력 중이면 무시
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+    });
+
+    window.addEventListener('keyup', e => {
+        if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    // 모바일 터치 핸들러
+    window.handleTouch = (dir) => {
+        if (dir === 'up') keys.ArrowUp = true;
+        if (dir === 'down') keys.ArrowDown = true;
+        if (dir === 'left') keys.ArrowLeft = true;
+        if (dir === 'right') keys.ArrowRight = true;
+    };
+
+    window.stopTouch = () => {
+        keys.ArrowUp = false;
+        keys.ArrowDown = false;
+        keys.ArrowLeft = false;
+        keys.ArrowRight = false;
+    };
+
+</script>
+</body>
+</html>
+
+
